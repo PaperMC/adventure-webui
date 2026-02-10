@@ -80,6 +80,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.kotlinx.html)
+                implementation(libs.ktor.openapi.schema)
             }
         }
 

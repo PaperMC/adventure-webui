@@ -1,23 +1,22 @@
+@file:OptIn(ExperimentalKtorApi::class)
+
 package net.kyori.adventure.webui.jvm.minimessage
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
-import io.ktor.server.http.content.defaultResource
-import io.ktor.server.http.content.resource
-import io.ktor.server.http.content.resources
-import io.ktor.server.http.content.static
-import io.ktor.server.http.content.staticFiles
 import io.ktor.server.http.content.staticResources
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
+import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.webSocket
+import io.ktor.utils.io.ExperimentalKtorApi
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import kotlinx.serialization.encodeToString
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
@@ -41,6 +40,7 @@ import net.kyori.adventure.webui.jvm.minimessage.hook.FONT_RENDER_HOOK
 import net.kyori.adventure.webui.jvm.minimessage.hook.HOVER_EVENT_RENDER_HOOK
 import net.kyori.adventure.webui.jvm.minimessage.hook.HookManager
 import net.kyori.adventure.webui.jvm.minimessage.hook.INSERTION_RENDER_HOOK
+import net.kyori.adventure.webui.jvm.minimessage.hook.SHADOW_COLOR_RENDER_HOOK
 import net.kyori.adventure.webui.jvm.minimessage.hook.TEXT_COLOR_RENDER_HOOK
 import net.kyori.adventure.webui.jvm.minimessage.hook.TEXT_DECORATION_RENDER_HOOK
 import net.kyori.adventure.webui.jvm.minimessage.hook.TEXT_RENDER_HOOK
@@ -55,8 +55,6 @@ import net.kyori.adventure.webui.websocket.ParseResult
 import net.kyori.adventure.webui.websocket.Placeholders
 import net.kyori.adventure.webui.websocket.Response
 import java.time.Instant
-import net.kyori.adventure.webui.jvm.minimessage.hook.SHADOW_COLOR_RENDER_HOOK
-import java.io.File
 
 private val startedAt = Instant.now()
 
@@ -220,6 +218,16 @@ public fun Application.miniMessage() {
                     bytebinInstance = BytebinStorage.BYTEBIN_INSTANCE,
                 )
                 call.respondText(Serializers.json.encodeToString(info))
+            }.describe {
+                operationId = "getBuildInfo"
+                summary = "Get build information"
+                description = "Returns information about the build of this application."
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The build information"
+                        schema = jsonSchema<BuildInfo>()
+                    }
+                }
             }
 
             route(URL_EDITOR) { installEditor() }

@@ -22,14 +22,20 @@ ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref =
 ktor-server-netty = { group = "io.ktor", name = "ktor-server-netty", version.ref = "ktor" }
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+ktor-server-cors = { group = "io.ktor", name = "ktor-server-cors", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 ktor-server-caching-headers = { group = "io.ktor", name = "ktor-server-caching-headers", version.ref = "ktor" }
 ktor-server-compression = { group = "io.ktor", name = "ktor-server-compression", version.ref = "ktor" }
+ktor-server-openapi = { group = "io.ktor", name = "ktor-server-openapi", version.ref = "ktor" }
+ktor-server-routing-openapi = { group = "io.ktor", name = "ktor-server-routing-openapi", version.ref = "ktor" }
+ktor-server-swagger = { group = "io.ktor", name = "ktor-server-swagger", version.ref = "ktor" }
 ktor-network = { group = "io.ktor", name = "ktor-network", version.ref = "ktor" }
+ktor-openapi-schema = { group = "io.ktor", name = "ktor-openapi-schema", version.ref = "ktor" }
+ktor-redoc = { group = "io.github.smiley4", name = "ktor-redoc", version = "5.4.0" }
 logback-classic = { group = "ch.qos.logback", name = "logback-classic", version = "1.5.28" }
 
 zKtlint = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint"}
 
 [bundles]
-ktor-server = [ "ktor-server-core", "ktor-server-netty", "ktor-server-websockets", "ktor-server-caching-headers", "ktor-server-compression" ]
+ktor-server = [ "ktor-server-core", "ktor-server-netty", "ktor-server-cors", "ktor-server-websockets", "ktor-server-caching-headers", "ktor-server-compression", "ktor-server-openapi", "ktor-server-routing-openapi", "ktor-server-swagger", "ktor-redoc" ]
 ktor-client = [ "ktor-client-core", "ktor-client-okhttp" ]
