@@ -2,7 +2,10 @@
 
 package net.kyori.adventure.webui.jvm.minimessage
 
+import io.ktor.http.ContentType.Text
 import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.ExampleObject
+import io.ktor.openapi.GenericElement
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.application.Application
 import io.ktor.server.http.content.staticResources
@@ -106,6 +109,45 @@ public fun Application.miniMessage() {
 
         // set up other routing
         route(URL_API) {
+
+            fun miniMessageToHtml(
+                isolateNewlines: Boolean,
+                miniMessage: String,
+                tagResolver: TagResolver = TagResolver.empty()
+            ): Response {
+                val response =
+                    try {
+                        val result = StringBuilder()
+
+                        if (isolateNewlines) {
+                            miniMessage
+                                .split("\n")
+                                .map { line -> HookManager.render(line) }
+                                .map { line ->
+                                    MiniMessage.miniMessage()
+                                        .deserialize(line, tagResolver)
+                                }
+                                .map { component -> HookManager.render(component) }
+                                .forEach { component ->
+                                    result.appendComponent(component)
+                                    result.append("\n")
+                                }
+                        } else {
+                            val component = MiniMessage.miniMessage().deserialize(HookManager.render(miniMessage), tagResolver)
+                            result.appendComponent(HookManager.render(component))
+                        }
+
+                        Response(ParseResult(true, result.toString()))
+                    } catch (e: Exception) {
+                        Response(
+                            ParseResult(
+                                false, errorMessage = e.message ?: "Unknown error!"
+                            )
+                        )
+                    }
+                return response
+            }
+
             webSocket(URL_MINI_TO_HTML) {
                 var tagResolver = TagResolver.empty()
                 var miniMessage: String? = null
@@ -123,45 +165,39 @@ public fun Application.miniMessage() {
                         }
 
                         if (miniMessage == null) continue
-                        val response =
-                            try {
-                                val result = StringBuilder()
-
-                                if (isolateNewlines) {
-                                    miniMessage
-                                        .split("\n")
-                                        .map { line -> HookManager.render(line) }
-                                        .map { line ->
-                                            MiniMessage.miniMessage()
-                                                .deserialize(line, tagResolver)
-                                        }
-                                        .map { component -> HookManager.render(component) }
-                                        .forEach { component ->
-                                            result.appendComponent(component)
-                                            result.append("\n")
-                                        }
-                                } else {
-                                    val component = MiniMessage.miniMessage().deserialize(HookManager.render(miniMessage), tagResolver)
-                                    result.appendComponent(HookManager.render(component))
-                                }
-
-                                Response(ParseResult(true, result.toString()))
-                            } catch (e: Exception) {
-                                Response(
-                                    ParseResult(
-                                        false, errorMessage = e.message ?: "Unknown error!"
-                                    )
-                                )
-                            }
+                        val response = miniMessageToHtml(isolateNewlines, miniMessage, tagResolver)
 
                         outgoing.send(Frame.Text(Serializers.json.encodeToString(response)))
                     }
                 }
             }
 
+            post(URL_MINI_TO_HTML) {
+                val structure = Serializers.json.tryDecodeFromString<Combined>(call.receiveText())
+                val input = structure?.miniMessage ?: return@post call.response.status(HttpStatusCode.BadRequest)
+                val response = miniMessageToHtml(false, input)
+                call.respondText(Serializers.json.encodeToString(response))
+            }.describe {
+                operationId = "miniMessageToHtml"
+                summary = "Convert MiniMessage to HTML"
+                description = "Converts a MiniMessage string to an HTML representation."
+                requestBody {
+                    schema = jsonSchema<Combined>()
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The HTML representation of the MiniMessage text, along with success status and error message if applicable"
+                        schema = jsonSchema<Response>()
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Invalid request - miniMessage field is missing"
+                    }
+                }
+            }
+
             post(URL_MINI_TO_JSON) {
                 val structure = Serializers.json.tryDecodeFromString<Combined>(call.receiveText())
-                val input = structure?.miniMessage ?: return@post
+                val input = structure?.miniMessage ?: return@post call.response.status(HttpStatusCode.BadRequest)
                 call.respondText(
                     GsonComponentSerializer.gson()
                         .serialize(
@@ -169,14 +205,56 @@ public fun Application.miniMessage() {
                                 .deserialize(input, structure.placeholders.tagResolver)
                         )
                 )
+            }.describe {
+                operationId = "miniMessageToJson"
+                summary = "Convert MiniMessage to JSON"
+                description = "Converts a MiniMessage string to a JSON representation of the Adventure Component."
+                requestBody {
+                    schema = jsonSchema<Combined>()
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The JSON representation of the MiniMessage text"
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Invalid request - miniMessage field is missing"
+                    }
+                }
             }
 
             post(URL_MINI_TO_TREE) {
                 val structure = Serializers.json.tryDecodeFromString<Combined>(call.receiveText())
-                val input = structure?.miniMessage ?: return@post
+                val input = structure?.miniMessage ?: return@post call.response.status(HttpStatusCode.BadRequest)
                 val resolver = structure.placeholders.tagResolver
                 val root = MiniMessage.miniMessage().deserializeToTree(input, resolver)
                 call.respondText(root.toString())
+            }.describe {
+                operationId = "miniMessageToTree"
+                summary = "Convert MiniMessage to tree"
+                description = "Converts a MiniMessage string to a tree representation showing the structure of the parsed tags."
+                requestBody {
+                    schema = jsonSchema<Combined>()
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "A string representation of the MiniMessage parse tree"
+                        Text.Plain {
+                            example("Example", ExampleObject(value = GenericElement("""
+                                Node {
+                                  TagNode('gold') {
+                                    TextNode('Hello')
+                                    TagNode('red') {
+                                      TextNode('World')
+                                    }
+                                  }
+                                }
+                            """.trimIndent())))
+                        }
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Invalid request - miniMessage field is missing"
+                    }
+                }
             }
 
             post(URL_MINI_SHORTEN) {
@@ -186,6 +264,21 @@ public fun Application.miniMessage() {
                     call.respondText(code)
                 } else {
                     call.response.status(HttpStatusCode.InternalServerError)
+                }
+            }.describe {
+                operationId = "shortenMiniMessage"
+                summary = "Shorten MiniMessage"
+                description = "Stores a MiniMessage string and its placeholders in Bytebin and returns a short code for retrieval."
+                requestBody {
+                    schema = jsonSchema<Combined>()
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The short code for retrieving the stored content"
+                    }
+                    HttpStatusCode.InternalServerError {
+                        description = "Failed to store the content in Bytebin"
+                    }
                 }
             }
 
@@ -198,6 +291,25 @@ public fun Application.miniMessage() {
                 } else {
                     call.response.status(HttpStatusCode.NotFound)
                 }
+            }.describe {
+                operationId = "retrieveShortenedMiniMessage"
+                summary = "Retrieve shortened MiniMessage"
+                description = "Retrieves a previously stored MiniMessage string and its placeholders using a short code."
+                parameters {
+                    query("code") {
+                        description = "The short code returned from the POST endpoint"
+                        required = true
+                    }
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The retrieved MiniMessage content and placeholders"
+                        schema = jsonSchema<Combined>()
+                    }
+                    HttpStatusCode.NotFound {
+                        description = "The short code was not found or has expired"
+                    }
+                }
             }
 
             post(URL_IN_GAME_PREVIEW) {
@@ -207,6 +319,21 @@ public fun Application.miniMessage() {
                     call.respondText(hostname)
                 } else {
                     call.response.status(HttpStatusCode.BadRequest)
+                }
+            }.describe {
+                operationId = "createInGamePreview"
+                summary = "Create in-game preview"
+                description = "Creates a temporary Minecraft server preview for the provided MiniMessage text. Returns a hostname that can be used to connect to the preview server."
+                requestBody {
+                    schema = jsonSchema<InGamePreview>()
+                }
+                responses {
+                    HttpStatusCode.OK {
+                        description = "The hostname of the preview server"
+                    }
+                    HttpStatusCode.BadRequest {
+                        description = "Invalid request - miniMessage or key is missing"
+                    }
                 }
             }
 

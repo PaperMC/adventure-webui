@@ -16,9 +16,11 @@ The result can easily be saved back again, allowing for a smooth editing experie
 
 For more information, see [the wiki](https://github.com/KyoriPowered/adventure-webui/wiki/Editor-API).
 
+For your convenience, we host the API documentation in [redoc](https://webui.advntr.dev/api/redoc), [swagger](https://webui.advntr.dev/api/swagger) or [raw openapi json](https://webui.advntr.dev/api/docs.json) formats.
+
 ### Deployment
 
-To run the server, type `./gradlew run -PisDevelopment`.
+To run the server, type `./gradlew jvmRun -PisDevelopment`.
 This will create a server running at `http://localhost:8080`.
 
 For production usage, simply remove the development flag from the run task.
