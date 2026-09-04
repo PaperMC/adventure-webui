@@ -1,15 +1,15 @@
 [versions]
 adventure = "5.1.1"
-kotlin = "2.3.21"
+kotlin = "2.4.10"
 ktlint = "1.8.0"
 ktor = "3.4.0"
 
 [plugins]
-indra-git = { id = "net.kyori.indra.git", version = "4.0.0" }
-jib = { id = "com.google.cloud.tools.jib", version = "3.5.3" }
+indra-git = { id = "net.kyori.indra.git", version = "4.1.0" }
+jib = { id = "com.google.cloud.tools.jib", version = "3.5.4" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin"}
-spotless = { id = "com.diffplug.spotless", version = "8.5.1" }
+spotless = { id = "com.diffplug.spotless", version = "8.10.2" }
 
 [libraries]
 adventure-minimessage = { group = "net.kyori", name = "adventure-text-minimessage", version.ref = "adventure" }
